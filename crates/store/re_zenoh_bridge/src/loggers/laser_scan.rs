@@ -7,7 +7,16 @@ use re_sdk_types::archetypes::Points3D;
 
 use crate::logger_registry::TopicLogger;
 
-pub struct LaserScanLogger;
+#[derive(Default)]
+pub struct LaserScanLogger {
+    positions: Vec<[f32; 3]>,
+}
+
+impl LaserScanLogger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
 
 impl TopicLogger for LaserScanLogger {
     fn log_message(
@@ -23,8 +32,8 @@ impl TopicLogger for LaserScanLogger {
         rec.set_time_sequence("ros2_time", stamp_ns);
         rec.set_timestamp_nanos_since_epoch("receive_time", receive_time_ns);
 
-        // Convert polar coordinates to 3D Cartesian points (in the scanner's frame, z=0)
-        let mut positions = Vec::with_capacity(scan.ranges.len());
+        // Reuse position buffer across messages
+        self.positions.clear();
         for (i, &range) in scan.ranges.iter().enumerate() {
             // Skip invalid ranges
             if range < scan.range_min || range > scan.range_max || !range.is_finite() {
@@ -34,12 +43,10 @@ impl TopicLogger for LaserScanLogger {
             let angle = scan.angle_min + (i as f32) * scan.angle_increment;
             let x = range * angle.cos();
             let y = range * angle.sin();
-            positions.push([x, y, 0.0_f32]);
+            self.positions.push([x, y, 0.0_f32]);
         }
 
-        let points = Points3D::new(positions);
-
-        rec.log(entity_path, &points)?;
+        rec.log(entity_path, &Points3D::new(&self.positions[..]))?;
 
         Ok(())
     }

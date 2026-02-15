@@ -32,6 +32,13 @@ impl TopicLogger for OccupancyGridLogger {
             return Ok(());
         }
 
+        let total_cells = (width as u64) * (height as u64);
+        if total_cells > 16_000_000 {
+            anyhow::bail!(
+                "OccupancyGrid {width}x{height} ({total_cells} cells) exceeds 16M cell limit"
+            );
+        }
+
         // Convert occupancy values to grayscale pixels:
         // -1 (unknown) → gray (128)
         // 0 (free) → white (254)

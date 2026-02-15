@@ -58,10 +58,10 @@ impl LoggerRegistry {
 
         // Spatial
         registry.register("sensor_msgs::msg::PointCloud2", || {
-            Box::new(loggers::pointcloud::PointCloudLogger)
+            Box::new(loggers::pointcloud::PointCloudLogger::new())
         });
         registry.register("sensor_msgs::msg::LaserScan", || {
-            Box::new(loggers::laser_scan::LaserScanLogger)
+            Box::new(loggers::laser_scan::LaserScanLogger::new())
         });
 
         // Camera

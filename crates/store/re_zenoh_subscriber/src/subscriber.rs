@@ -1,6 +1,7 @@
 //! Per-topic Zenoh subscriber management.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -20,10 +21,14 @@ pub struct SubscriptionManager {
     subscribers: HashMap<String, zenoh::pubsub::Subscriber<()>>,
     message_tx: mpsc::Sender<ZenohMessage>,
     message_rx: Option<mpsc::Receiver<ZenohMessage>>,
+    dropped_count: Arc<AtomicU64>,
 }
 
-/// Channel capacity for incoming Zenoh messages (applies backpressure when full).
-const MESSAGE_CHANNEL_CAPACITY: usize = 4096;
+/// Channel capacity for incoming Zenoh messages.
+///
+/// Kept small to bound memory: each slot can hold a multi-MB payload
+/// (e.g., 6 MB for a 1080p image). At 64 slots the worst case is ~384 MB.
+const MESSAGE_CHANNEL_CAPACITY: usize = 64;
 
 impl SubscriptionManager {
     /// Create a new subscription manager.
@@ -34,12 +39,18 @@ impl SubscriptionManager {
             subscribers: HashMap::new(),
             message_tx: tx,
             message_rx: Some(rx),
+            dropped_count: Arc::new(AtomicU64::new(0)),
         }
     }
 
     /// Take the message receiver. Can only be called once.
     pub fn take_message_receiver(&mut self) -> Option<mpsc::Receiver<ZenohMessage>> {
         self.message_rx.take()
+    }
+
+    /// Return the number of messages dropped since last call (resets the counter).
+    pub fn take_dropped_count(&self) -> u64 {
+        self.dropped_count.swap(0, Ordering::Relaxed)
     }
 
     /// Subscribe to a discovered topic.
@@ -52,6 +63,7 @@ impl SubscriptionManager {
         let topic_name = topic.topic_name.clone();
         let type_name = topic.type_name.clone();
         let tx = self.message_tx.clone();
+        let dropped = Arc::clone(&self.dropped_count);
 
         // Use the data key expression from discovery.
         // For rmw_zenoh topics this is: <domain_id>/<topic>/<dds_type>/<type_hash>
@@ -79,7 +91,7 @@ impl SubscriptionManager {
                 };
 
                 if tx.try_send(msg).is_err() {
-                    re_log::debug!("Message channel full or receiver dropped");
+                    dropped.fetch_add(1, Ordering::Relaxed);
                 }
             })
             .wait()

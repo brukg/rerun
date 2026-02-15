@@ -8,6 +8,8 @@ use re_sdk_types::archetypes::{DepthImage, Image};
 
 use crate::logger_registry::TopicLogger;
 
+const MAX_IMAGE_DIM: u32 = 8192;
+
 pub struct ImageLogger;
 
 impl TopicLogger for ImageLogger {
@@ -19,6 +21,14 @@ impl TopicLogger for ImageLogger {
         receive_time_ns: i64,
     ) -> anyhow::Result<()> {
         let img = cdr::try_decode_message::<sensor_msgs::Image<'_>>(payload)?;
+
+        if img.width > MAX_IMAGE_DIM || img.height > MAX_IMAGE_DIM {
+            anyhow::bail!(
+                "Image dimensions {}x{} exceed limit {MAX_IMAGE_DIM}",
+                img.width,
+                img.height
+            );
+        }
 
         let stamp_ns = img.header.stamp.as_nanos();
         rec.set_time_sequence("ros2_time", stamp_ns);

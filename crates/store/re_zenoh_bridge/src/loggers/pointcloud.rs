@@ -11,7 +11,19 @@ use re_sdk_types::components::Color;
 
 use crate::logger_registry::TopicLogger;
 
-pub struct PointCloudLogger;
+const MAX_POINTS: usize = 5_000_000;
+
+#[derive(Default)]
+pub struct PointCloudLogger {
+    positions: Vec<[f32; 3]>,
+    colors: Vec<Color>,
+}
+
+impl PointCloudLogger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
 
 impl TopicLogger for PointCloudLogger {
     fn log_message(
@@ -38,10 +50,16 @@ impl TopicLogger for PointCloudLogger {
         };
 
         let step = pc.point_step as usize;
-        let num_points = (pc.data.len() / step).min((pc.height * pc.width) as usize);
+        if step == 0 {
+            return Ok(());
+        }
+        let num_points = (pc.data.len() / step)
+            .min((pc.height * pc.width) as usize)
+            .min(MAX_POINTS);
         let is_be = pc.is_bigendian;
 
-        let mut positions = Vec::with_capacity(num_points);
+        // Reuse position buffer across messages (clear resets length, keeps allocation)
+        self.positions.clear();
         for i in 0..num_points {
             let offset = i * step;
             let point_data = &pc.data[offset..offset + step];
@@ -50,31 +68,37 @@ impl TopicLogger for PointCloudLogger {
             let y = read_f32(point_data, y_field.offset as usize, y_field.datatype, is_be);
             let z = read_f32(point_data, z_field.offset as usize, z_field.datatype, is_be);
 
-            positions.push([x, y, z]);
+            if x.is_finite() && y.is_finite() && z.is_finite() {
+                self.positions.push([x, y, z]);
+            }
         }
 
         // Try to find RGB color field
         let rgb_field = find_field(&pc.fields, "rgb")
             .or_else(|| find_field(&pc.fields, "rgba"));
 
-        let mut points = Points3D::new(positions);
+        let mut points = Points3D::new(&self.positions[..]);
 
         if let Some(rgb_f) = rgb_field {
-            let mut colors = Vec::with_capacity(num_points);
-            for i in 0..num_points {
-                let offset = i * step + rgb_f.offset as usize;
-                if offset + 4 <= pc.data.len() {
-                    let rgba_bytes = &pc.data[offset..offset + 4];
-                    // ROS2 typically packs RGB as float32 with bytes [B, G, R, A] in little-endian
-                    let r = rgba_bytes[2];
-                    let g = rgba_bytes[1];
-                    let b = rgba_bytes[0];
-                    let a = if rgba_bytes[3] > 0 { rgba_bytes[3] } else { 255 };
-                    colors.push(Color::from_unmultiplied_rgba(r, g, b, a));
+            let color_end = rgb_f.offset as usize + 4;
+            if color_end <= step {
+                // Reuse color buffer
+                self.colors.clear();
+                for i in 0..num_points {
+                    let offset = i * step + rgb_f.offset as usize;
+                    if offset + 4 <= pc.data.len() {
+                        let rgba_bytes = &pc.data[offset..offset + 4];
+                        // ROS2 typically packs RGB as float32 with bytes [B, G, R, A] in little-endian
+                        let r = rgba_bytes[2];
+                        let g = rgba_bytes[1];
+                        let b = rgba_bytes[0];
+                        let a = if rgba_bytes[3] > 0 { rgba_bytes[3] } else { 255 };
+                        self.colors.push(Color::from_unmultiplied_rgba(r, g, b, a));
+                    }
                 }
-            }
-            if !colors.is_empty() {
-                points = points.with_colors(colors);
+                if !self.colors.is_empty() {
+                    points = points.with_colors(self.colors.iter().copied());
+                }
             }
         }
 
@@ -93,6 +117,10 @@ fn find_field<'a>(fields: &'a [PointField], name: &str) -> Option<&'a PointField
 }
 
 fn read_f32(data: &[u8], offset: usize, datatype: PointFieldDatatype, is_big_endian: bool) -> f32 {
+    let byte_size = datatype_size(datatype);
+    if offset + byte_size > data.len() {
+        return 0.0;
+    }
     let data = &data[offset..];
     let mut cursor = Cursor::new(data);
     match (is_big_endian, datatype) {
@@ -110,5 +138,14 @@ fn read_f32(data: &[u8], offset: usize, datatype: PointFieldDatatype, is_big_end
         (false, PointFieldDatatype::UInt32) => cursor.read_u32::<LittleEndian>().unwrap_or(0) as f32,
         (false, PointFieldDatatype::Float32) => cursor.read_f32::<LittleEndian>().unwrap_or(0.0),
         (false, PointFieldDatatype::Float64) => cursor.read_f64::<LittleEndian>().unwrap_or(0.0) as f32,
+    }
+}
+
+fn datatype_size(dt: PointFieldDatatype) -> usize {
+    match dt {
+        PointFieldDatatype::Int8 | PointFieldDatatype::UInt8 => 1,
+        PointFieldDatatype::Int16 | PointFieldDatatype::UInt16 => 2,
+        PointFieldDatatype::Int32 | PointFieldDatatype::UInt32 | PointFieldDatatype::Float32 => 4,
+        PointFieldDatatype::Float64 => 8,
     }
 }

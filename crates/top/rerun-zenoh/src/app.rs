@@ -147,24 +147,39 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         .expect("Message receiver should be available");
 
     let mut msg_count: u64 = 0;
+    let mut error_count: u64 = 0;
+    let mut total_dropped: u64 = 0;
     let start_time = std::time::Instant::now();
+    let mut last_status = std::time::Instant::now();
 
     loop {
         tokio::select! {
             Some(msg) = rx.recv() => {
                 if let Err(e) = bridge.process_message(&msg) {
-                    re_log::warn_once!(
-                        "Failed to process message on {}: {e}",
-                        msg.topic_name
-                    );
+                    error_count += 1;
+                    if error_count <= 10 || error_count.is_power_of_two() {
+                        re_log::warn!(
+                            "Failed to process message on {} ({error_count} total errors): {e}",
+                            msg.topic_name
+                        );
+                    }
                 }
                 msg_count += 1;
 
-                // Periodic status
-                if msg_count.is_multiple_of(1000) {
+                // Periodic status including drop count
+                if last_status.elapsed().as_secs() >= 5 {
+                    let dropped = sub_manager.take_dropped_count();
+                    total_dropped += dropped;
                     let elapsed = start_time.elapsed().as_secs_f64();
                     let rate = msg_count as f64 / elapsed;
-                    re_log::info!("Processed {msg_count} messages ({rate:.0} msgs/sec)");
+                    if dropped > 0 {
+                        re_log::warn!(
+                            "Processed {msg_count} msgs ({rate:.0}/s), dropped {dropped} (bridge can't keep up)"
+                        );
+                    } else {
+                        re_log::info!("Processed {msg_count} msgs ({rate:.0}/s)");
+                    }
+                    last_status = std::time::Instant::now();
                 }
             }
             _ = tokio::signal::ctrl_c() => {
@@ -175,10 +190,11 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
     }
 
     // Cleanup
+    total_dropped += sub_manager.take_dropped_count();
     sub_manager.unsubscribe_all();
     let elapsed = start_time.elapsed().as_secs_f64();
     println!(
-        "Processed {msg_count} messages in {elapsed:.1}s ({:.0} msgs/sec)",
+        "Processed {msg_count} messages in {elapsed:.1}s ({:.0} msgs/sec), {total_dropped} dropped, {error_count} errors",
         msg_count as f64 / elapsed
     );
 
