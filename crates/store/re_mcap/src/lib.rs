@@ -10,5 +10,10 @@ pub use error::Error;
 pub use layers::{Layer, LayerIdentifier, LayerRegistry, MessageLayer, SelectedLayers};
 pub use parsers::ros2msg::sensor_msgs::{ImageEncoding, decode_image_format};
 pub use parsers::{MessageParser, ParserContext, cdr};
+
+/// Re-exported ROS2 message type definitions for use by external crates.
+pub mod ros2_definitions {
+    pub use crate::parsers::ros2msg::definitions::*;
+}
 // TODO(grtlr): We should expose an `Mcap` object that internally holds the summary + a reference to the bytes.
 pub use util::read_summary;

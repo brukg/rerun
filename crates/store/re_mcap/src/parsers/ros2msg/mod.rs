@@ -1,6 +1,6 @@
 use crate::parsers::MessageParser;
 
-mod definitions;
+pub mod definitions;
 
 pub mod geometry_msgs;
 pub mod rcl_interfaces;

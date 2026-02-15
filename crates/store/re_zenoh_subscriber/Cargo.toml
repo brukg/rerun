@@ -1,0 +1,21 @@
+[package]
+name = "re_zenoh_subscriber"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+description = "Per-topic Zenoh subscription management and message forwarding for Rerun"
+
+[lints]
+workspace = true
+
+[dependencies]
+re_log.workspace = true
+re_zenoh_discovery.workspace = true
+
+anyhow.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt"] }
+zenoh.workspace = true

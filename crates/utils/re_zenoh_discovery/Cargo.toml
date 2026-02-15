@@ -1,0 +1,20 @@
+[package]
+name = "re_zenoh_discovery"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+description = "Zenoh session management and ROS2 topic discovery for Rerun"
+
+[lints]
+workspace = true
+
+[dependencies]
+re_log.workspace = true
+
+anyhow.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt"] }
+zenoh.workspace = true

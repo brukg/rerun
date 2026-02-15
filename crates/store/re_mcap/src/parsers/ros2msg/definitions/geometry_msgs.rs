@@ -56,6 +56,43 @@ pub struct Transform {
     pub rotation: Quaternion,
 }
 
+/// This expresses a velocity in free space broken into its linear and angular parts.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Twist {
+    pub linear: Vector3,
+    pub angular: Vector3,
+}
+
+/// A Twist with reference coordinate frame and timestamp.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TwistStamped {
+    pub header: Header,
+    pub twist: Twist,
+}
+
+/// This represents a twist in free space with uncertainty.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TwistWithCovariance {
+    pub twist: Twist,
+    /// Row-major 6x6 covariance matrix (36 elements).
+    pub covariance: Vec<f64>,
+}
+
+/// This represents a pose in free space with uncertainty.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PoseWithCovariance {
+    pub pose: Pose,
+    /// Row-major 6x6 covariance matrix (36 elements).
+    pub covariance: Vec<f64>,
+}
+
+/// This represents a pose in free space with uncertainty, stamped.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PoseWithCovarianceStamped {
+    pub header: Header,
+    pub pose: PoseWithCovariance,
+}
+
 /// This expresses a transform from coordinate frame `header.frame_id`
 /// to the coordinate frame `child_frame_id` at the time of `header.stamp`
 ///

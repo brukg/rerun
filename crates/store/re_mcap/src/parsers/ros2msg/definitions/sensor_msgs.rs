@@ -768,6 +768,40 @@ pub struct BatteryState {
     pub serial_number: String,
 }
 
+/// Single scan from a planar laser range-finder.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LaserScan {
+    /// Timestamp in the header is the acquisition time of the first ray in the scan.
+    pub header: Header,
+
+    /// Start angle of the scan (rad).
+    pub angle_min: f32,
+
+    /// End angle of the scan (rad).
+    pub angle_max: f32,
+
+    /// Angular distance between measurements (rad).
+    pub angle_increment: f32,
+
+    /// Time between measurements (seconds).
+    pub time_increment: f32,
+
+    /// Time between scans (seconds).
+    pub scan_time: f32,
+
+    /// Minimum range value (m).
+    pub range_min: f32,
+
+    /// Maximum range value (m).
+    pub range_max: f32,
+
+    /// Range data (m). Values < range_min or > range_max should be discarded.
+    pub ranges: Vec<f32>,
+
+    /// Intensity data. Empty if the device does not provide intensities.
+    pub intensities: Vec<f32>,
+}
+
 /// Measurement of the Magnetic Field vector at a specific location.
 ///
 /// If the covariance of the measurement is known, it should be filled in.

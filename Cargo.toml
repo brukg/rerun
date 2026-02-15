@@ -90,11 +90,16 @@ re_tf = { path = "crates/store/re_tf", version = "=0.30.0-alpha.1", default-feat
 re_types_core = { path = "crates/store/re_types_core", version = "=0.30.0-alpha.1", default-features = false }
 re_uri = { path = "crates/store/re_uri", version = "=0.30.0-alpha.1", default-features = false }
 
+# crates/store (zenoh):
+re_zenoh_bridge = { path = "crates/store/re_zenoh_bridge", version = "=0.30.0-alpha.1", default-features = false }
+re_zenoh_subscriber = { path = "crates/store/re_zenoh_subscriber", version = "=0.30.0-alpha.1", default-features = false }
+
 # crates/top:
 re_sdk = { path = "crates/top/re_sdk", version = "=0.30.0-alpha.1", default-features = false }
 rerun = { path = "crates/top/rerun", version = "=0.30.0-alpha.1", default-features = false }
 rerun_c = { path = "crates/top/rerun_c", version = "=0.30.0-alpha.1", default-features = false }
 rerun-cli = { path = "crates/top/rerun-cli", version = "=0.30.0-alpha.1", default-features = false }
+rerun-zenoh = { path = "crates/top/rerun-zenoh", version = "=0.30.0-alpha.1", default-features = false }
 
 # crates/utils:
 re_analytics = { path = "crates/utils/re_analytics", version = "=0.30.0-alpha.1", default-features = false }
@@ -113,6 +118,7 @@ re_mutex = { path = "crates/utils/re_mutex", version = "=0.30.0-alpha.1", defaul
 re_perf_telemetry = { path = "crates/utils/re_perf_telemetry", version = "=0.30.0-alpha.1", default-features = false }
 re_quota_channel = { path = "crates/utils/re_quota_channel", version = "=0.30.0-alpha.1", default-features = false }
 re_ros_msg = { path = "crates/utils/re_ros_msg", version = "=0.30.0-alpha.1", default-features = false }
+re_zenoh_discovery = { path = "crates/utils/re_zenoh_discovery", version = "=0.30.0-alpha.1", default-features = false }
 re_rvl = { path = "crates/utils/re_rvl", version = "=0.30.0-alpha.1", default-features = false }
 re_span = { path = "crates/utils/re_span", version = "=0.30.0-alpha.1", default-features = false }
 re_string_interner = { path = "crates/utils/re_string_interner", version = "=0.30.0-alpha.1", default-features = false }
@@ -446,6 +452,7 @@ wgpu = { version = "27.0.1", default-features = false, features = [
 ] }
 xshell = "0.2.7"
 xxhash-rust = { version = "0.8", features = ["xxh32"] }
+zenoh = { version = "1.1", default-features = false, features = ["transport_tcp", "transport_udp"] }
 zip = { version = "2.1", default-features = false, features = ["deflate"] }
 
 # ---------------------------------------------------------------------------------

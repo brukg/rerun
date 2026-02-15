@@ -1,0 +1,30 @@
+[package]
+name = "rerun-zenoh"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+description = "Native Zenoh topic visualization for ROS2, built on Rerun"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rerun-zenoh"
+path = "src/bin/rerun_zenoh.rs"
+
+[dependencies]
+re_log.workspace = true
+re_zenoh_bridge.workspace = true
+re_zenoh_discovery.workspace = true
+re_zenoh_subscriber.workspace = true
+rerun = { workspace = true, features = ["sdk"] }
+
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["full"] }
+urdf-rs.workspace = true
+zenoh.workspace = true
